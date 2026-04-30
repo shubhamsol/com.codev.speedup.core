@@ -1,0 +1,10 @@
+{
+  "name": "com.codev.speedup.core",
+  "version": "1.0.0",
+  "displayName": "CodeV Speedup Core SDK",
+  "description": "Core SDK and casual game template framework for CodeV.",
+  "unity": "2021.3",
+  "dependencies": {
+    "com.unity.addressables": "1.21.19"
+  }
+}
