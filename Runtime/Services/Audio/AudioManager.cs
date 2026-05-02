@@ -93,6 +93,44 @@ namespace Speedup.Services.Audio
             _sfxSource.volume = Mathf.Clamp01(volume);
         }
 
+        public bool HapticsEnabled { get; private set; } = true;
+
+        public void ToggleHaptics(bool isOn)
+        {
+            HapticsEnabled = isOn;
+        }
+
+        public void PlayHaptic(long milliseconds = -1)
+        {
+            if (HapticsEnabled)
+            {
+#if UNITY_ANDROID && !UNITY_EDITOR
+                if (milliseconds > 0)
+                {
+                    try
+                    {
+                        using (AndroidJavaClass unityPlayer = new AndroidJavaClass("com.unity3d.player.UnityPlayer"))
+                        using (AndroidJavaObject currentActivity = unityPlayer.GetStatic<AndroidJavaObject>("currentActivity"))
+                        using (AndroidJavaObject vibrator = currentActivity.Call<AndroidJavaObject>("getSystemService", "vibrator"))
+                        {
+                            vibrator.Call("vibrate", milliseconds);
+                        }
+                        return; // Successfully vibrated with specific duration
+                    }
+                    catch (System.Exception e)
+                    {
+                        Debug.LogWarning("[AudioManager] Failed to vibrate with duration: " + e.Message);
+                    }
+                }
+#endif
+
+#if UNITY_ANDROID || UNITY_IOS
+                // Fallback to default vibration for iOS, or Android if duration is not specified or failed
+                Handheld.Vibrate();
+#endif
+            }
+        }
+
         public void Initialize()
         {
             

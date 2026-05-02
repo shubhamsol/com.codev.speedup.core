@@ -1,23 +1,36 @@
 using System;
 using System.Collections.Generic;
 using UnityEngine;
+using Speedup.Services.Save;
 
 namespace Speedup.Services.Inventory
 {
     /// <summary>
-    /// Default implementation of IInventoryService using PlayerPrefs for local persistence.
+    /// Default implementation of IInventoryService backed by a data stream.
     /// </summary>
     public class LocalInventoryService : IInventoryService
     {
-        private const string PrefsKey = "InventoryService_Items";
+        private const string StreamKey = "inventory.items";
         
         public event Action<string, int> OnItemCountChanged;
 
         private Dictionary<string, int> _items;
+        private readonly IDataStreamService _dataStreamService;
+        private IDataStream<InventorySaveData> _stream;
+
+        public LocalInventoryService() : this(null)
+        {
+        }
+
+        public LocalInventoryService(IDataStreamService dataStreamService)
+        {
+            _dataStreamService = dataStreamService;
+        }
 
         public void Initialize()
         {
-            LoadData();
+            EnsureStream();
+            LoadFromStreamData();
         }
 
         public void AddItem(string itemId, int amount = 1)
@@ -34,7 +47,7 @@ namespace Speedup.Services.Inventory
             }
 
             _items[itemId] += amount;
-            SaveData();
+            PersistToStream();
             
             OnItemCountChanged?.Invoke(itemId, _items[itemId]);
         }
@@ -58,12 +71,12 @@ namespace Speedup.Services.Inventory
             if (_items[itemId] == 0)
             {
                 _items.Remove(itemId);
-                SaveData();
+                PersistToStream();
                 OnItemCountChanged?.Invoke(itemId, 0);
             }
             else
             {
-                SaveData();
+                PersistToStream();
                 OnItemCountChanged?.Invoke(itemId, _items[itemId]);
             }
             
@@ -85,49 +98,84 @@ namespace Speedup.Services.Inventory
             return _items;
         }
 
-        private void LoadData()
+        private void EnsureStream()
+        {
+            if (_dataStreamService == null)
+            {
+                return;
+            }
+
+            if (!_dataStreamService.TryGetStream(StreamKey, out IDataStream rawStream))
+            {
+                var createdStream = new DataStream<InventorySaveData>(
+                    StreamKey,
+                    new InventorySaveData
+                    {
+                        keys = new List<string>(),
+                        values = new List<int>()
+                    });
+                _dataStreamService.RegisterStream(createdStream);
+                _stream = createdStream;
+            }
+            else
+            {
+                _stream = rawStream as IDataStream<InventorySaveData>;
+                if (_stream == null)
+                {
+                    Debug.LogError($"[Inventory] Stream '{StreamKey}' exists with incompatible type.");
+                    return;
+                }
+            }
+
+            _stream.OnAfterLoad -= HandleAfterStreamLoad;
+            _stream.OnAfterLoad += HandleAfterStreamLoad;
+        }
+
+        private void LoadFromStreamData()
         {
             _items = new Dictionary<string, int>();
-            
-            if (PlayerPrefs.HasKey(PrefsKey))
+
+            if (_stream?.Value == null || _stream.Value.keys == null || _stream.Value.values == null)
             {
-                string json = PlayerPrefs.GetString(PrefsKey);
-                try
+                return;
+            }
+
+            for (int i = 0; i < _stream.Value.keys.Count; i++)
+            {
+                if (i < _stream.Value.values.Count)
                 {
-                    var data = JsonUtility.FromJson<InventorySaveData>(json);
-                    if (data != null && data.keys != null && data.values != null)
-                    {
-                        for (int i = 0; i < data.keys.Count; i++)
-                        {
-                            if (i < data.values.Count)
-                            {
-                                _items[data.keys[i]] = data.values[i];
-                            }
-                        }
-                    }
-                }
-                catch (Exception e)
-                {
-                    Debug.LogError($"[Inventory] Failed to load inventory data: {e.Message}");
+                    _items[_stream.Value.keys[i]] = _stream.Value.values[i];
                 }
             }
         }
 
-        private void SaveData()
+        private void PersistToStream()
         {
+            if (_stream == null)
+            {
+                return;
+            }
+
             var data = new InventorySaveData
             {
                 keys = new List<string>(_items.Keys),
                 values = new List<int>(_items.Values)
             };
-            
-            string json = JsonUtility.ToJson(data);
-            PlayerPrefs.SetString(PrefsKey, json);
-            PlayerPrefs.Save();
+
+            _stream.SetValue(data, true);
+        }
+
+        private void HandleAfterStreamLoad()
+        {
+            LoadFromStreamData();
+            foreach (var pair in _items)
+            {
+                OnItemCountChanged?.Invoke(pair.Key, pair.Value);
+            }
         }
 
         [Serializable]
-        private class InventorySaveData
+        public class InventorySaveData
         {
             public List<string> keys;
             public List<int> values;

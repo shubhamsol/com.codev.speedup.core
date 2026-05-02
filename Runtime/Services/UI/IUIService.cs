@@ -15,11 +15,16 @@ namespace Speedup.Services.UI
         UIFrame Frame { get; }
 
         void OpenScreen(string screenId);
+        void OpenScreen(System.Enum screenId);
         void OpenScreen<T>(string screenId, T properties) where T : WindowProperties;
+        void OpenScreen<T>(System.Enum screenId, T properties) where T : WindowProperties;
         void CloseCurrentScreen();
 
         void ShowPopup(string panelId);
+        void ShowPopup(System.Enum panelId);
         void ShowPopup<T>(string panelId, T properties) where T : PanelProperties;
+        void ShowPopup<T>(System.Enum panelId, T properties) where T : PanelProperties;
         void HidePopup(string panelId);
+        void HidePopup(System.Enum panelId);
     }
 }

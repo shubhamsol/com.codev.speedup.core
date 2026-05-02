@@ -1,5 +1,5 @@
-using UnityEngine;
 using deVoid.UIFramework;
+using UnityEngine;
 
 namespace Speedup.Services.UI
 {
@@ -42,7 +42,6 @@ namespace Speedup.Services.UI
                     Debug.LogError("[UIManager] CRITICAL: No UISettings provided and no UIFrame found in scene!");
                 }
             }
-            OpenScreen("HomeScreen");
         }
 
         public void OpenScreen(string screenId)
@@ -50,9 +49,19 @@ namespace Speedup.Services.UI
             Frame?.OpenWindow(screenId);
         }
 
+        public void OpenScreen(System.Enum screenId)
+        {
+            OpenScreen(screenId.ToString());
+        }
+
         public void OpenScreen<T>(string screenId, T properties) where T : WindowProperties
         {
             Frame?.OpenWindow(screenId, properties);
+        }
+
+        public void OpenScreen<T>(System.Enum screenId, T properties) where T : WindowProperties
+        {
+            OpenScreen<T>(screenId.ToString(), properties);
         }
 
         public void CloseCurrentScreen()
@@ -65,14 +74,29 @@ namespace Speedup.Services.UI
             Frame?.ShowPanel(panelId);
         }
 
+        public void ShowPopup(System.Enum panelId)
+        {
+            ShowPopup(panelId.ToString());
+        }
+
         public void ShowPopup<T>(string panelId, T properties) where T : PanelProperties
         {
             Frame?.ShowPanel(panelId, properties);
         }
 
+        public void ShowPopup<T>(System.Enum panelId, T properties) where T : PanelProperties
+        {
+            ShowPopup<T>(panelId.ToString(), properties);
+        }
+
         public void HidePopup(string panelId)
         {
             Frame?.HidePanel(panelId);
+        }
+
+        public void HidePopup(System.Enum panelId)
+        {
+            HidePopup(panelId.ToString());
         }
     }
 }

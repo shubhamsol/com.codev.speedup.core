@@ -11,5 +11,8 @@ namespace Speedup.Services.Audio
         void PlaySFX(string id);
         void SetMusicVolume(float volume);
         void SetSFXVolume(float volume);
+        void PlayHaptic(long milliseconds = -1);
+        void ToggleHaptics(bool isOn);
+        bool HapticsEnabled { get; }
     }
 }
