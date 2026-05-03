@@ -78,4 +78,5 @@ namespace Speedup.Core
             _services.Clear();
         }
     }
+
 }
